@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { publicRequest } from "../../requestMethods";
 import NodeComp from "../components/Node";
 import Edge from "../components/Edge";
-import Dynamiclines from "../components/Dynamiclines";
 
 function Home() {
   const [nodes, setNodes] = useState([]);
@@ -13,7 +11,9 @@ function Home() {
   const [sourceId, setSourceId] = useState();
   const [createTarget, setCreateTarget] = useState();
   const [isResizing, setIsResizing] = useState(false);
-  const [label, setLabel] = useState();
+  const [label, setLabel] = useState("");
+  const [xdata, setXdata] = useState(0);
+  const [ydata, setYdata] = useState(0);
 
   useEffect(() => {
     // Fetch nodes and edges from the backend
@@ -31,41 +31,35 @@ function Home() {
     setEdges(res.data);
   };
 
+  const handleDragStart = (e, node) => {
+    setXdata(e.clientX - node.position.x);
+    setYdata(e.clientY - node.position.y);
+  };
+
   const handleDrag = (e, node) => {
     e.preventDefault();
-    console.log(e)
     if (!isResizing) {
-      console.log("hello");
       const updatedNodes = nodes.map((n) =>
         n._id === node._id
-          ? { ...n, position: { x: e.clientX, y: e.clientY } }
+          ? // ? { ...n, position: { x: e.clientX, y: e.clientY } }
+            { ...n, position: { x: e.clientX - xdata, y: e.clientY - ydata } }
           : n
       );
       setNodes(updatedNodes);
     }
-
-    // Optional: Send updated position to the backend
-    // async function updateNode(){
-    //   const updateNode = await publicRequest.put('/updateNode', {nodeId: node.id, position: { x: e.clientX, y: e.clientY } });
-    //   console.log(updateNode.data)
-    // }
-
-    // updateNode()
   };
 
   const handleDragover = (e, node) => {
     e.preventDefault();
     e.stopPropagation();
-    // console.log(e.clientX, e.clientY);
   };
 
   const handleDrop = (e, node) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log(node);
     const updatedNodes = nodes.map((n) =>
       n._id === node._id
-        ? { ...n, position: { x: e.clientX, y: e.clientY } }
+        ? { ...n, position: { x: e.clientX - xdata, y: e.clientY - ydata } }
         : n
     );
     setNodes(updatedNodes);
@@ -73,7 +67,7 @@ function Home() {
       const updateNode = await publicRequest.put("/updateNode", {
         nodeId: node._id,
         label: node.label,
-        position: { x: e.clientX, y: e.clientY },
+        position: { x: e.clientX - xdata, y: e.clientY - ydata },
       });
       console.log(updateNode.data);
     }
@@ -81,21 +75,13 @@ function Home() {
     updateNode();
   };
 
-  // const
-
   const handleNodeClick = async (e, nodeId) => {
-    // console.log(e.target)
-    console.log(createEdge);
-    console.log(nodeId);
-
     if (nodeId && createEdge && !createSource) {
-      console.log("hi");
       setSourceId(nodeId);
       const sourcePos = nodes.find((n) => n._id === nodeId)?.position;
       setCreateSource(sourcePos);
     }
     if (nodeId && createEdge && createSource && !createTarget) {
-      console.log(createSource);
       const targetPos = nodes.find((n) => n._id === nodeId)?.position;
       setCreateTarget(targetPos);
       const newEdge = { source: sourceId, target: nodeId };
@@ -117,13 +103,11 @@ function Home() {
 
   const addNode = async () => {
     const newNode = {
-      // id: `${Date.now()}`,
       label: `Node ${nodes.length + 1}`,
       position: { x: Math.random() * 300, y: Math.random() * 300 },
     };
     const res = await publicRequest.post("/createNode", newNode);
     console.log(res.data);
-    // const savedNode = await res.json();
     setNodes((prevNodes) => [...prevNodes, res.data.data]);
   };
 
@@ -134,20 +118,12 @@ function Home() {
   };
 
   const handleUpdateLabel = (e, node, label) => {
-    console.log(label);
     if (label) {
       const updatedNodes = nodes.map((ele) => {
-        console.log(ele)
-        return ele._id === node._id ? { ...ele, label } : node;
+        return ele._id === node._id ? { ...ele, label } : ele;
       });
       setNodes(updatedNodes);
-      //   setNodes((prevNodes) =>
-      //     prevNodes.map((ele) =>{
 
-      //         return ele._id === node._id ? { ...ele, label: label } : node
-      //     }
-      //     )
-      //   );
       async function updateNode() {
         const updateNode = await publicRequest.put("/updateNode", {
           nodeId: node._id,
@@ -158,17 +134,15 @@ function Home() {
       }
 
       updateNode();
+      setLabel("");
     }
   };
 
   const handleDelete = async (e, node) => {
-    console.log(node._id);
     const deletedNode = nodes.filter((ele) => ele._id !== node._id);
     const deletedEdges = edges.filter((ele) => {
-      console.log(ele.source !== node._id && ele.target !== node._id);
       return ele.source !== node._id && ele.target !== node._id;
     });
-    console.log(deletedEdges);
     setNodes(deletedNode);
     setEdges(deletedEdges);
     const deleteNode = await publicRequest.post("/deleteNode", {
@@ -178,13 +152,11 @@ function Home() {
   };
 
   const handleEdgeDelete = async (e, edge) => {
-    console.log(edge);
     const deleteEdge = edges.filter((ele) => ele._id !== edge._id);
-    // console.log(deleteEdge)
     setEdges(deleteEdge);
     async function deletedEdge() {
       const res = await publicRequest.post("/deleteEdge", { edgeId: edge._id });
-      console.log(res);
+      console.log(res.data);
     }
     deletedEdge();
   };
@@ -202,7 +174,7 @@ function Home() {
         backgroundSize: "20px 20px",
       }}
     >
-      <div>Create Manufacturing process flow diagrams</div>
+      <div>Create Node and Edges</div>
       <span>
         <button onClick={addNode}>Add Node</button>
       </span>{" "}
@@ -225,6 +197,7 @@ function Home() {
             key={node._id}
             node={node}
             onDrag={(e) => handleDrag(e, node)}
+            onDragStart={(e) => handleDragStart(e, node)}
             onDragOver={(e) => handleDragover(e, node)}
             onDrop={(e) => handleDrop(e, node)}
             onClick={(e) => handleNodeClick(e, node._id)}
@@ -237,7 +210,6 @@ function Home() {
             label={label}
           />
         ))}
-        {/* <Edge  sourcePos={createSource} targetPos={createTarget} /> */}
         {edges.map((edge, ind) => {
           const sourcePos = nodes.find((n) => n._id === edge.source)?.position;
           const targetPos = nodes.find((n) => n._id === edge.target)?.position;
@@ -250,7 +222,7 @@ function Home() {
             />
           );
         })}
-        {/* <Dynamiclines /> */}
+        
       </div>
     </div>
   );

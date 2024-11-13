@@ -5,6 +5,7 @@ function App() {
     return (
       <div>
         <Home />
+        <div>Mini drawing board</div>
         <Dynamiclines />
       </div>
     )

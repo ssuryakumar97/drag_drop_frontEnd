@@ -1,13 +1,10 @@
 import React, { useState } from "react";
 
 const Edge = ({ sourcePos, targetPos, onDelete }) => {
-
-  console.log(sourcePos)
-  
- const handleMenu = (e, edge) => {
-    e.preventDefault()
-    onDelete(e, edge)
-  }
+  const handleMenu = (e, edge) => {
+    e.preventDefault();
+    onDelete(e, edge);
+  };
 
   return (
     <svg
@@ -22,14 +19,6 @@ const Edge = ({ sourcePos, targetPos, onDelete }) => {
         stroke="black"
         strokeWidth="2"
       />
-      {/* <line
-        x1={sourcePosX}
-        y1={sourcePosY}
-        x2={targetPosX}
-        y2={targetPosY}
-        stroke="black"
-        strokeWidth="2"
-      /> */}
     </svg>
   );
 };
